@@ -11,6 +11,7 @@ from rich.syntax import Syntax
 from .config import SummaryConfig
 from .ollama_client import create_ollama_llm
 from .summarizer import summarize_merged_files
+from .file_handler import find_text_files
 
 console = Console()
 
@@ -21,9 +22,26 @@ console = Console()
     "-f",
     "files",
     multiple=True,
-    required=True,
     type=click.Path(exists=True),
     help="Input file(s) to summarize. Can be specified multiple times.",
+)
+@click.option(
+    "--directory",
+    "-d",
+    "directory",
+    type=click.Path(exists=True, file_okay=False, dir_okay=True),
+    help="Directory containing files to summarize.",
+)
+@click.option(
+    "--recursive",
+    "-r",
+    is_flag=True,
+    help="Recursively search subdirectories when using --directory.",
+)
+@click.option(
+    "--extensions",
+    default=None,
+    help="Comma-separated file extensions to include (e.g., '.txt,.md,.log'). Defaults to common text formats.",
 )
 @click.option(
     "--model",
@@ -64,6 +82,9 @@ console = Console()
 )
 def main(
     files: tuple,
+    directory: Optional[str],
+    recursive: bool,
+    extensions: Optional[str],
     model: Optional[str],
     ollama_url: Optional[str],
     output: Optional[str],
@@ -81,6 +102,15 @@ def main(
       # Summarize multiple files
       zulip-summary -f file1.txt -f file2.txt -m llama3
 
+      # Summarize all files in a directory
+      zulip-summary -d /path/to/directory -m llama2
+
+      # Recursively summarize files in directory
+      zulip-summary -d /path/to/directory -r -m llama3
+
+      # Specify file extensions
+      zulip-summary -d /path/to/directory --extensions .txt,.md -m llama2
+
       # Save output to file
       zulip-summary -f document.txt -o summary.txt
 
@@ -88,6 +118,46 @@ def main(
       zulip-summary -f doc.txt -m mistral -t 0.5 --max-tokens 1000
     """
     try:
+        # Validate input: must provide either files or directory
+        if not files and not directory:
+            console.print("[red]Error:[/red] Must specify either --file/-f or --directory/-d")
+            sys.exit(1)
+
+        if files and directory:
+            console.print("[red]Error:[/red] Cannot specify both --file/-f and --directory/-d at the same time")
+            sys.exit(1)
+
+        # Collect all files to process
+        files_to_process = []
+
+        if directory:
+            # Parse extensions if provided
+            ext_set = None
+            if extensions:
+                ext_set = set(ext.strip() if ext.strip().startswith('.') else f'.{ext.strip()}'
+                             for ext in extensions.split(','))
+
+            if verbose:
+                console.print(f"[cyan]Searching for files in:[/cyan] {directory}")
+                if recursive:
+                    console.print("[cyan]Mode:[/cyan] Recursive")
+                if ext_set:
+                    console.print(f"[cyan]Extensions:[/cyan] {', '.join(sorted(ext_set))}")
+
+            try:
+                files_to_process = find_text_files(directory, recursive=recursive, extensions=ext_set)
+            except Exception as e:
+                console.print(f"[red]Error accessing directory:[/red] {e}")
+                sys.exit(1)
+
+            if not files_to_process:
+                console.print(f"[yellow]No text files found in:[/yellow] {directory}")
+                sys.exit(1)
+
+            if verbose:
+                console.print(f"[green]Found {len(files_to_process)} file(s)[/green]")
+        else:
+            files_to_process = list(files)
         # Create configuration
         config = SummaryConfig.from_args(
             ollama_url=ollama_url,
@@ -117,7 +187,7 @@ def main(
 
         # Process all files as a merged document
         try:
-            result = summarize_merged_files([str(f) for f in files], llm, config)
+            result = summarize_merged_files([str(f) for f in files_to_process], llm, config)
         except Exception as e:
             console.print(f"[red]Error processing files:[/red] {e}")
             if verbose:

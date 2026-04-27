@@ -10,6 +10,8 @@ A LangChain-based text summarization tool using local Ollama models.
 - 🎨 Beautiful CLI with progress indicators
 - ⚙️ Flexible configuration via CLI args or environment variables
 - 📁 Batch processing of multiple files
+- 📂 Directory processing with recursive search support
+- 🔍 Configurable file extension filtering
 
 ## Prerequisites
 
@@ -85,6 +87,22 @@ zulip-summary -f document.txt -o summary.txt
 zulip-summary -f file1.txt -f file2.txt -f file3.txt -o summaries.txt
 ```
 
+### Directory Processing
+
+```bash
+# Summarize all text files in a directory
+zulip-summary -d /path/to/directory -m llama2
+
+# Recursively search subdirectories
+zulip-summary -d /path/to/directory -r -m llama3
+
+# Filter by specific file extensions
+zulip-summary -d /path/to/directory --extensions .txt,.md -m llama2
+
+# Combine with output file
+zulip-summary -d /path/to/directory -r -o summary.txt -m llama2
+```
+
 ### Advanced Options
 
 ```bash
@@ -118,7 +136,11 @@ zulip-summary -f document.txt
 
 ```
 Options:
-  -f, --file PATH         Input file(s) to summarize (required, multiple allowed)
+  -f, --file PATH         Input file(s) to summarize (multiple allowed)
+  -d, --directory PATH    Directory containing files to summarize
+  -r, --recursive         Recursively search subdirectories (use with -d)
+  --extensions TEXT       Comma-separated file extensions (e.g., .txt,.md,.log)
+                         Default: .txt, .md, .rst, .log, .csv, .json, .xml, .yaml, .yml
   -m, --model TEXT        Ollama model name (default: llama2)
   --ollama-url TEXT       Ollama server URL (default: http://localhost:11434)
   -o, --output PATH       Output file path (default: stdout)
@@ -126,6 +148,8 @@ Options:
   --max-tokens INTEGER    Maximum summary length (default: 500)
   -v, --verbose           Enable verbose output
   --help                  Show this message and exit
+
+Note: You must specify either --file or --directory, but not both.
 ```
 
 ## How It Works

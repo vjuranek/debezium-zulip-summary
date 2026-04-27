@@ -7,6 +7,9 @@ from rich.console import Console
 
 console = Console()
 
+# Common text file extensions to process
+TEXT_EXTENSIONS = {'.txt', '.md', '.rst', '.log', '.csv', '.json', '.xml', '.yaml', '.yml'}
+
 
 def read_file(file_path: str, encoding: str = "utf-8") -> str:
     """Read text file with proper error handling."""
@@ -62,3 +65,36 @@ def get_file_info(file_path: str) -> dict:
         "size": path.stat().st_size,
         "size_kb": round(path.stat().st_size / 1024, 2),
     }
+
+
+def find_text_files(directory: str, recursive: bool = False, extensions: set = None) -> List[str]:
+    """Find all text files in a directory.
+
+    Args:
+        directory: Directory path to search
+        recursive: If True, search subdirectories recursively
+        extensions: Set of file extensions to include (with dots, e.g., {'.txt', '.md'})
+                   If None, uses default TEXT_EXTENSIONS
+
+    Returns:
+        List of file paths as strings
+    """
+    dir_path = Path(directory)
+
+    if not dir_path.is_dir():
+        raise NotADirectoryError(f"Not a directory: {directory}")
+
+    if not os.access(dir_path, os.R_OK):
+        raise PermissionError(f"No read permission: {directory}")
+
+    if extensions is None:
+        extensions = TEXT_EXTENSIONS
+
+    files = []
+    pattern = "**/*" if recursive else "*"
+
+    for file_path in dir_path.glob(pattern):
+        if file_path.is_file() and file_path.suffix.lower() in extensions:
+            files.append(str(file_path.absolute()))
+
+    return sorted(files)
