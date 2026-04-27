@@ -1,8 +1,8 @@
 """Core summarization logic using LangChain."""
 
 from typing import Optional, List
-from langchain_classic.chains.summarize import load_summarize_chain
 from langchain_core.documents import Document
+from langchain_core.prompts import ChatPromptTemplate
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.llms import Ollama
 from rich.console import Console
@@ -12,6 +12,22 @@ from .config import SummaryConfig
 from .file_handler import read_file, get_file_info
 
 console = Console()
+
+# Prompt templates for summarization
+STUFF_PROMPT = ChatPromptTemplate.from_messages([
+    ("system", "You are a helpful assistant that creates concise summaries of text."),
+    ("user", "Please provide a concise summary of the following text:\n\n{text}\n\nSummary:")
+])
+
+MAP_PROMPT = ChatPromptTemplate.from_messages([
+    ("system", "You are a helpful assistant that creates concise summaries of text."),
+    ("user", "Please provide a concise summary of the following text chunk:\n\n{text}\n\nSummary:")
+])
+
+REDUCE_PROMPT = ChatPromptTemplate.from_messages([
+    ("system", "You are a helpful assistant that creates concise summaries of text."),
+    ("user", "Please combine the following summaries into a single cohesive summary:\n\n{text}\n\nFinal Summary:")
+])
 
 
 def determine_strategy(text_length: int, chunk_size: int = 4000) -> str:
@@ -29,19 +45,15 @@ def summarize_text(text: str, llm: Ollama, config: SummaryConfig) -> str:
     if config.verbose:
         console.print(f"[cyan]Using summarization strategy:[/cyan] {strategy}")
 
-    # Split text into documents
+    # Split text into chunks
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=config.chunk_size,
         chunk_overlap=config.chunk_overlap,
     )
     texts = text_splitter.split_text(text)
-    docs = [Document(page_content=t) for t in texts]
 
     if config.verbose:
-        console.print(f"[cyan]Split into {len(docs)} chunk(s)[/cyan]")
-
-    # Load appropriate chain
-    chain = load_summarize_chain(llm, chain_type=strategy, verbose=config.verbose)
+        console.print(f"[cyan]Split into {len(texts)} chunk(s)[/cyan]")
 
     # Run summarization with progress indicator
     with Progress(
@@ -49,16 +61,61 @@ def summarize_text(text: str, llm: Ollama, config: SummaryConfig) -> str:
         TextColumn("[progress.description]{task.description}"),
         console=console,
     ) as progress:
-        task = progress.add_task("Summarizing...", total=None)
         try:
             if strategy == "stuff":
-                summary = chain.run(docs)
+                task = progress.add_task("Summarizing...", total=None)
+                summary = _summarize_stuff(texts, llm, config)
             else:
-                summary = chain.run(docs)
+                task = progress.add_task(f"Summarizing chunks (0/{len(texts)})...", total=None)
+                summary = _summarize_map_reduce(texts, llm, config, progress, task)
         finally:
             progress.stop()
 
     return summary.strip()
+
+
+def _summarize_stuff(chunks: List[str], llm: Ollama, config: SummaryConfig) -> str:
+    """Summarize text using stuff strategy - combine all chunks and summarize at once."""
+    # Combine all chunks into single text
+    combined_text = "\n\n".join(chunks)
+
+    # Create chain with prompt template
+    chain = STUFF_PROMPT | llm
+
+    # Invoke chain
+    summary = chain.invoke({"text": combined_text})
+
+    return summary
+
+
+def _summarize_map_reduce(
+    chunks: List[str],
+    llm: Ollama,
+    config: SummaryConfig,
+    progress: Optional[Progress] = None,
+    task_id = None
+) -> str:
+    """Summarize text using map-reduce strategy - summarize each chunk, then combine."""
+    # Map phase: Summarize each chunk
+    chunk_summaries = []
+    map_chain = MAP_PROMPT | llm
+
+    for i, chunk in enumerate(chunks):
+        if progress and task_id:
+            progress.update(task_id, description=f"Summarizing chunks ({i+1}/{len(chunks)})...")
+
+        summary = map_chain.invoke({"text": chunk})
+        chunk_summaries.append(summary)
+
+    # Reduce phase: Combine summaries
+    if progress and task_id:
+        progress.update(task_id, description="Combining summaries...")
+
+    combined_summaries = "\n\n".join(chunk_summaries)
+    reduce_chain = REDUCE_PROMPT | llm
+    final_summary = reduce_chain.invoke({"text": combined_summaries})
+
+    return final_summary
 
 
 def summarize_file(file_path: str, llm: Ollama, config: SummaryConfig) -> dict:
