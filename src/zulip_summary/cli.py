@@ -6,7 +6,6 @@ from typing import Optional
 import click
 from rich.console import Console
 from rich.panel import Panel
-from rich.syntax import Syntax
 
 from .config import SummaryConfig
 from .ollama_client import create_ollama_llm
