@@ -81,16 +81,16 @@ console = Console()
     help="Enable verbose output",
 )
 def main(
-    files: tuple,
-    directory: Optional[str],
-    recursive: bool,
-    extensions: Optional[str],
-    model: Optional[str],
-    ollama_url: Optional[str],
-    output: Optional[str],
-    temperature: Optional[float],
-    max_tokens: Optional[int],
-    verbose: bool,
+        files: tuple,
+        directory: Optional[str],
+        recursive: bool,
+        extensions: Optional[str],
+        model: Optional[str],
+        ollama_url: Optional[str],
+        output: Optional[str],
+        temperature: Optional[float],
+        max_tokens: Optional[int],
+        verbose: bool,
 ):
     """Summarize text files using LangChain and local Ollama models.
 
@@ -120,11 +120,13 @@ def main(
     try:
         # Validate input: must provide either files or directory
         if not files and not directory:
-            console.print("[red]Error:[/red] Must specify either --file/-f or --directory/-d")
+            console.print(
+                "[red]Error:[/red] Must specify either --file/-f or --directory/-d")
             sys.exit(1)
 
         if files and directory:
-            console.print("[red]Error:[/red] Cannot specify both --file/-f and --directory/-d at the same time")
+            console.print(
+                "[red]Error:[/red] Cannot specify both --file/-f and --directory/-d at the same time")
             sys.exit(1)
 
         # Collect all files to process
@@ -134,28 +136,35 @@ def main(
             # Parse extensions if provided
             ext_set = None
             if extensions:
-                ext_set = set(ext.strip() if ext.strip().startswith('.') else f'.{ext.strip()}'
-                             for ext in extensions.split(','))
+                ext_set = set(ext.strip() if ext.strip().startswith(
+                    '.') else f'.{ext.strip()}'
+                              for ext in extensions.split(','))
 
             if verbose:
-                console.print(f"[cyan]Searching for files in:[/cyan] {directory}")
+                console.print(
+                    f"[cyan]Searching for files in:[/cyan] {directory}")
                 if recursive:
                     console.print("[cyan]Mode:[/cyan] Recursive")
                 if ext_set:
-                    console.print(f"[cyan]Extensions:[/cyan] {', '.join(sorted(ext_set))}")
+                    console.print(
+                        f"[cyan]Extensions:[/cyan] {', '.join(sorted(ext_set))}")
 
             try:
-                files_to_process = find_text_files(directory, recursive=recursive, extensions=ext_set)
+                files_to_process = find_text_files(directory,
+                                                   recursive=recursive,
+                                                   extensions=ext_set)
             except Exception as e:
                 console.print(f"[red]Error accessing directory:[/red] {e}")
                 sys.exit(1)
 
             if not files_to_process:
-                console.print(f"[yellow]No text files found in:[/yellow] {directory}")
+                console.print(
+                    f"[yellow]No text files found in:[/yellow] {directory}")
                 sys.exit(1)
 
             if verbose:
-                console.print(f"[green]Found {len(files_to_process)} file(s)[/green]")
+                console.print(
+                    f"[green]Found {len(files_to_process)} file(s)[/green]")
         else:
             files_to_process = list(files)
         # Create configuration
@@ -187,7 +196,8 @@ def main(
 
         # Process all files as a merged document
         try:
-            result = summarize_merged_files([str(f) for f in files_to_process], llm, config)
+            result = summarize_merged_files([str(f) for f in files_to_process],
+                                            llm, config)
         except Exception as e:
             console.print(f"[red]Error processing files:[/red] {e}")
             if verbose:
@@ -208,7 +218,8 @@ def main(
             console.print("\n" + output_text)
 
         if verbose:
-            console.print(f"\n[green]✓[/green] Successfully summarized {result['file_count']} file(s)")
+            console.print(
+                f"\n[green]✓[/green] Successfully summarized {result['file_count']} file(s)")
 
     except KeyboardInterrupt:
         console.print("\n[yellow]Interrupted by user[/yellow]")
@@ -233,7 +244,8 @@ def format_result(result: dict, verbose: bool = False) -> str:
     if verbose:
         output_lines.append("Files processed:")
         for i, file_info in enumerate(result["files"], 1):
-            output_lines.append(f"  {i}. {file_info['name']} ({file_info['size_kb']} KB)")
+            output_lines.append(
+                f"  {i}. {file_info['name']} ({file_info['size_kb']} KB)")
         output_lines.append("")
         output_lines.append(
             f"Total size: {result['total_size_kb']} KB"

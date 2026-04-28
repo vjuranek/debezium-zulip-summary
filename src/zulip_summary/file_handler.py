@@ -8,7 +8,8 @@ from rich.console import Console
 console = Console()
 
 # Common text file extensions to process
-TEXT_EXTENSIONS = {'.txt', '.md', '.rst', '.log', '.csv', '.json', '.xml', '.yaml', '.yml'}
+TEXT_EXTENSIONS = {'.txt', '.md', '.rst', '.log', '.csv', '.json', '.xml',
+                   '.yaml', '.yml'}
 
 
 def read_file(file_path: str, encoding: str = "utf-8") -> str:
@@ -30,12 +31,14 @@ def read_file(file_path: str, encoding: str = "utf-8") -> str:
             content = f.read()
 
     if not content.strip():
-        raise ValueError(f"File is empty or contains only whitespace: {file_path}")
+        raise ValueError(
+            f"File is empty or contains only whitespace: {file_path}")
 
     return content
 
 
-def chunk_text(text: str, chunk_size: int = 4000, overlap: int = 200) -> List[str]:
+def chunk_text(text: str, chunk_size: int = 4000, overlap: int = 200) -> List[
+    str]:
     """Split text into overlapping chunks for processing large documents."""
     if len(text) <= chunk_size:
         return [text]
@@ -67,7 +70,8 @@ def get_file_info(file_path: str) -> dict:
     }
 
 
-def find_text_files(directory: str, recursive: bool = False, extensions: set = None) -> List[str]:
+def find_text_files(directory: str, recursive: bool = False,
+                    extensions: set = None) -> List[str]:
     """Find all text files in a directory.
 
     Args:

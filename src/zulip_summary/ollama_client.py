@@ -34,7 +34,8 @@ def get_available_models(base_url: str) -> list[str]:
 
 
 def create_ollama_llm(
-    base_url: str, model_name: str, temperature: float = 0.3, verbose: bool = False
+        base_url: str, model_name: str, temperature: float = 0.3,
+        verbose: bool = False
 ) -> Ollama:
     """Create and configure Ollama LLM instance."""
     # Health check first

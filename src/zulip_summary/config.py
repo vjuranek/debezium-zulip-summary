@@ -19,17 +19,18 @@ class SummaryConfig:
 
     @classmethod
     def from_args(
-        cls,
-        ollama_url: Optional[str] = None,
-        model: Optional[str] = None,
-        temperature: Optional[float] = None,
-        max_tokens: Optional[int] = None,
-        verbose: bool = False,
+            cls,
+            ollama_url: Optional[str] = None,
+            model: Optional[str] = None,
+            temperature: Optional[float] = None,
+            max_tokens: Optional[int] = None,
+            verbose: bool = False,
     ) -> "SummaryConfig":
         """Create config from CLI arguments with environment variable fallback."""
         return cls(
             ollama_base_url=ollama_url
-            or os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
+                            or os.getenv("OLLAMA_BASE_URL",
+                                         "http://localhost:11434"),
             model_name=model or os.getenv("OLLAMA_MODEL", "llama2"),
             temperature=temperature
             if temperature is not None
